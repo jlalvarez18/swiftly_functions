@@ -12,6 +12,8 @@ public class Swiftly {
     
     public typealias RequestResponseBlock = (Request) throws -> ResponseRepresentable
     
+    public init() {}
+    
     public func define(_ name: String, block: @escaping RequestResponseBlock) {
         self.functions[name] = block
     }
