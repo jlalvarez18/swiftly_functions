@@ -1,6 +1,7 @@
 
 import Foundation
 import Vapor
+import HTTP
 
 public protocol SwiftlyFunctionController {
     static func defineFunctions(context: Swiftly)
@@ -8,11 +9,14 @@ public protocol SwiftlyFunctionController {
 
 public final class Swiftly {
     
+    private let drop: Droplet
     private var functions: [String: RequestResponseBlock] = [:]
     
     public typealias RequestResponseBlock = (Request) throws -> ResponseRepresentable
     
-    public init() {}
+    public init() throws {
+        self.drop = try Droplet()
+    }
     
     public func define(_ name: String, block: @escaping RequestResponseBlock) {
         self.functions[name] = block
@@ -32,14 +36,33 @@ public final class Swiftly {
         controller.defineFunctions(context: self)
     }
     
-    public func run() throws {
-        let drop = try Droplet()
+    public func request(uri: String, method: String, query: [String: Any]? = nil, json: JSON? = nil, headers: [String: String]? = nil) throws -> Response  {
+        let request = Request(method: HTTP.Method(method), uri: uri)
+        request.json = json
         
-        drop.post("functions", String.parameter) { (req) -> ResponseRepresentable in
+        if let _query = query {
+            request.query = try Node(node: _query)
+        }
+        
+        if let _headers = headers {
+            var h: [HeaderKey: String] = [:]
+            
+            for (k, v) in _headers {
+                h[HeaderKey(k)] = v
+            }
+            
+            request.headers = h
+        }
+        
+        return try self.drop.client.respond(to: request)
+    }
+    
+    public func run() throws {
+        self.drop.post("functions", String.parameter) { (req) -> ResponseRepresentable in
             return try self.performFunction(req)
         }
         
-        drop.get("functions") { (req) -> ResponseRepresentable in
+        self.drop.get("functions") { (req) -> ResponseRepresentable in
             var json = JSON()
             
             try json.set("functions", Array(self.functions.keys))
@@ -47,6 +70,6 @@ public final class Swiftly {
             return json
         }
         
-        try drop.run()
+        try self.drop.run()
     }
 }
