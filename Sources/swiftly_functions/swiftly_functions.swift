@@ -6,7 +6,7 @@ public protocol SwiftlyFunctionController {
     static func defineFunctions(context: Swiftly)
 }
 
-public class Swiftly {
+public final class Swiftly {
     
     private var functions: [String: RequestResponseBlock] = [:]
     
@@ -33,13 +33,13 @@ public class Swiftly {
     }
     
     public func run() throws {
-        let droplet = try Droplet()
+        let drop = try Droplet()
         
-        droplet.post("functions", String.parameter) { (req) -> ResponseRepresentable in
+        drop.post("functions", String.parameter) { (req) -> ResponseRepresentable in
             return try self.performFunction(req)
         }
         
-        droplet.get("functions") { (req) -> ResponseRepresentable in
+        drop.get("functions") { (req) -> ResponseRepresentable in
             var json = JSON()
             
             try json.set("functions", Array(self.functions.keys))
@@ -47,6 +47,6 @@ public class Swiftly {
             return json
         }
         
-        try droplet.run()
+        try drop.run()
     }
 }
