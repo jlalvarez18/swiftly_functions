@@ -7,12 +7,14 @@ public protocol SwiftlyFunctionController {
     static func defineFunctions(context: Swiftly)
 }
 
+public protocol SwiftlyResponse: ResponseRepresentable {}
+
 public final class Swiftly {
     
     private let drop: Droplet
     private var functions: [String: RequestResponseBlock] = [:]
     
-    public typealias RequestResponseBlock = (Request) throws -> ResponseRepresentable
+    public typealias RequestResponseBlock = (Request) throws -> SwiftlyResponse
     
     public init() throws {
         self.drop = try Droplet()
@@ -22,7 +24,7 @@ public final class Swiftly {
         self.functions[name] = block
     }
     
-    public func performFunction(_ request: Request) throws -> ResponseRepresentable {
+    public func performFunction(_ request: Request) throws -> SwiftlyResponse {
         let name = try request.parameters.next(String.self)
         
         guard let function = self.functions[name] else {
@@ -58,11 +60,11 @@ public final class Swiftly {
     }
     
     public func run() throws {
-        self.drop.post("functions", String.parameter) { (req) -> ResponseRepresentable in
+        self.drop.post("functions", String.parameter) { (req) -> SwiftlyResponse in
             return try self.performFunction(req)
         }
         
-        self.drop.get("functions") { (req) -> ResponseRepresentable in
+        self.drop.get("functions") { (req) -> SwiftlyResponse in
             var json = JSON()
             
             try json.set("functions", Array(self.functions.keys))
@@ -73,3 +75,9 @@ public final class Swiftly {
         try self.drop.run()
     }
 }
+
+extension Response: SwiftlyResponse {}
+extension Swift.String: SwiftlyResponse {}
+extension Foundation.Data: SwiftlyResponse {}
+extension JSON: SwiftlyResponse {}
+
